@@ -1,7 +1,9 @@
 {
   "name": "did",
-  "bin": { "did" : "./did.js" },
-  "version": "0.0.0",
+  "bin": {
+    "did": "./did.js"
+  },
+  "version": "0.0.1",
   "description": "A command line interface to idonethis.",
   "main": "did.js",
   "repository": {
@@ -21,6 +23,11 @@
     "cli-color": "^0.3.2",
     "bluebird": "^2.3.11"
   },
-  "keywords": ["idonethis", "cli"],
-  "engines" : { "node" : ">=0.10.22" }
+  "keywords": [
+    "idonethis",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=0.10.22"
+  }
 }
