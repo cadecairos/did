@@ -1,0 +1,26 @@
+{
+  "name": "did",
+  "bin": { "did" : "./did.js" },
+  "version": "0.0.0",
+  "description": "A command line interface to idonethis.",
+  "main": "did.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cadecairos/did.git"
+  },
+  "author": "Christopher De Cairos <chris@chrisdecairos.ca>",
+  "preferGlobal": true,
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cadecairos/did/issues"
+  },
+  "homepage": "https://github.com/cadecairos/did",
+  "dependencies": {
+    "commander": "^2.5.0",
+    "request": "^2.48.0",
+    "cli-color": "^0.3.2",
+    "bluebird": "^2.3.11"
+  },
+  "keywords": ["idonethis", "cli"],
+  "engines" : { "node" : ">=0.10.22" }
+}
