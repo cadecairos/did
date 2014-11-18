@@ -138,6 +138,7 @@ did
           }
         }
         console.log(error('You are not a part of the team: ' + team));
+        process.exit(1);
       })
       .then(function(done){
         console.log(success.underline('Your done was created!'));
