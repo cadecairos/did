@@ -35,3 +35,9 @@ Assuming your team name isn't 'teams', you can omit the `do`
 `did [team name] "yay shorthand!"`
 
 If you're not sure what the team name is, run `did teams` to list your teams
+
+### Open iDoneThis in your default browser
+
+`did open [optional team name]`
+
+As stated above, if you don't know what your teams are, run `did teams`. Leaving out a team name will bring you to your iDoneThis homepage.

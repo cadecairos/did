@@ -4,9 +4,11 @@ var did = require('commander');
 var request = require('request');
 var clc = require('cli-color');
 var BPromise = require('bluebird');
+var openurl = require('openurl');
 
+var BASE_URL = 'https://idonethis.com/';
 var API_VERSION = 'v0.1'
-var BASE_URL = 'https://idonethis.com/api/' + API_VERSION + '/';
+var API_URL = BASE_URL + 'api/' + API_VERSION + '/';
 
 var apiToken = process.env.IDONETHIS_API_TOKEN;
 
@@ -15,6 +17,10 @@ var row = clc.white;
 var success = clc.green;
 var warn = clc.yellow;
 var error = clc.red.bold;
+
+function openURL(url) {
+  openurl.open(url);
+}
 
 function setup() {
   if ( did.apiToken ) {
@@ -39,7 +45,7 @@ function getTeams() {
     var req = setup();
     req({
       method: 'GET',
-      url: BASE_URL + 'teams/'
+      url: API_URL + 'teams/'
     }, function(err, resp, body) {
       if ( err ) {
         console.error('ERR: ' + err.code);
@@ -85,7 +91,7 @@ function sendDone(team, task) {
     }
     req({
       method: 'POST',
-      url: BASE_URL + 'dones/',
+      url: API_URL + 'dones/',
       body: {
         raw_text: task,
         team: team
@@ -119,7 +125,7 @@ function createDone(team, task) {
   }
 
   getTeams()
-    .then(function( teams ) {
+    .then(function(teams) {
       for (var i = 0; i < teams.length; i++) {
         if ( teams[i].name === team ) {
           return sendDone(teams[i].short_name, task);
@@ -135,8 +141,27 @@ function createDone(team, task) {
     });
 }
 
+function open(team) {
+  if ( !team ) {
+    openURL(BASE_URL + 'home/');
+    process.exit();
+  }
+
+  getTeams()
+    .then(function(teams) {
+      for (var i = 0; i < teams.length; i++) {
+        if ( teams[i].name === team ) {
+          openURL(BASE_URL + 'cal/' + teams[i].short_name);
+          process.exit();
+        }
+      }
+      console.log(error('You are not a part of the team: ' + team));
+      process.exit(1);
+    });
+}
+
 did
-  .version('0.0.1')
+  .version('0.2.0')
   .option('-t, --api-token [token]', 'Specify an API Token')
   .option('-g, --goal', 'Make this task a goal');
 
@@ -150,6 +175,11 @@ did
   .command('do <team> <task>')
   .description('Create a done for the specified team')
   .action(createDone);
+
+did
+  .command('open [team]')
+  .description('Open iDoneThis in your default browser, optionally providing the team to view')
+  .action(open)
 
 did
   .command('* <team> <task>')
