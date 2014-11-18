@@ -10,6 +10,12 @@ var BASE_URL = 'https://idonethis.com/api/' + API_VERSION + '/';
 
 var apiToken = process.env.IDONETHIS_API_TOKEN;
 
+var title = clc.red.underline;
+var row = clc.white;
+var success = clc.green;
+var warn = clc.yellow;
+var error = clc.red.bold;
+
 function setup() {
   if ( did.apiToken ) {
     apiToken = did.apiToken;
@@ -60,9 +66,23 @@ function getTeams() {
   });
 }
 
-function createDone(team, task) {
+function teams() {
+  getTeams()
+    .then(function(teams) {
+      console.log(title('Teams:'));
+      teams.forEach(function(team){
+        console.log(row(team.name));
+      });
+      process.exit(0);
+    });
+}
+
+function sendDone(team, task) {
   return new BPromise(function(resolve) {
     var req = setup();
+    if ( did.goal ) {
+      task = '[] ' + task;
+    }
     req({
       method: 'POST',
       url: BASE_URL + 'dones/',
@@ -92,59 +112,48 @@ function createDone(team, task) {
   })
 }
 
-var title = clc.red.underline;
-var row = clc.white;
-var success = clc.green;
-var warn = clc.yellow;
-var error = clc.red.bold;
+function createDone(team, task) {
+  if ( arguments.length !== 3 ) {
+    console.log(error('You must provide a team and a task'));
+    process.exit(1);
+  }
+
+  getTeams()
+    .then(function( teams ) {
+      for (var i = 0; i < teams.length; i++) {
+        if ( teams[i].name === team ) {
+          return sendDone(teams[i].short_name, task);
+        }
+      }
+      console.log(error('You are not a part of the team: ' + team));
+      process.exit(1);
+    })
+    .then(function(done){
+      console.log(success.underline('Your ' + (did.goal ? 'goal' :  'done') + ' was created!'));
+      console.log(success('created for "' + done.owner + '"" in the team "' + team + '"'));
+      console.log(success('Text: ' + done.raw_text));
+    });
+}
 
 did
   .version('0.0.1')
-  .option('-t, --api-token [token]', 'Specify an API Token');
+  .option('-t, --api-token [token]', 'Specify an API Token')
+  .option('-g, --goal', 'Make this task a goal');
 
 did
   .command('teams')
   .description('List your teams')
-  .action(function() {
-    getTeams()
-      .then(function(teams) {
-        console.log(title('Teams:'));
-        teams.forEach(function(team){
-          console.log(row(team.name));
-        });
-        process.exit(0);
-      });
-  });
+  .action(teams);
+
 
 did
   .command('do <team> <task>')
   .description('Create a done for the specified team')
-  .action(function(team, task, otherTasks) {
+  .action(createDone);
 
-    if ( !team ) {
-      console.log(error('You must specify a team!'));
-      process.exit(1);
-    }
-
-    if ( !task ) {
-      console.log(error('You must provide your completed task!'));
-    }
-
-    getTeams()
-      .then(function( teams ) {
-        for (var i = 0; i < teams.length; i++) {
-          if ( teams[i].name === team ) {
-            return createDone(teams[i].short_name, task);
-          }
-        }
-        console.log(error('You are not a part of the team: ' + team));
-        process.exit(1);
-      })
-      .then(function(done){
-        console.log(success.underline('Your done was created!'));
-        console.log(success('created for "' + done.owner + '"" in the team "' + team + '"'));
-        console.log(success('Text: ' + done.raw_text));
-      });
-  });
+did
+  .command('* <team> <task>')
+  .description('Shorthand for \'do\'')
+  .action(createDone);
 
 did.parse(process.argv);
