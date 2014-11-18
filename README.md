@@ -14,6 +14,8 @@ Run `did --help` or `did COMMAND --help` for help using the tool
 
 ## Options
 
+### API Tokens
+
 If you're too lazy to add your token to your environment, you can specify it at runtime with `-t` or `--api-token`. for example, `did -t top-secret-api-token do MyTeamName "I fixed a thing!"`. Ideally though, you'll want to add the token to your environment once, to make your life easier.
 
 ### Goals
