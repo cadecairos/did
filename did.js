@@ -227,7 +227,7 @@ function open(team) {
 }
 
 did
-  .version('0.3.0')
+  .version('v0.3.1')
   .option('-t, --api-token [token]', 'Specify an API Token')
   .option('-g, --goal', 'Make this task a goal')
   .option('-i, --interactive', 'interactive done entry mode');
