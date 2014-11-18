@@ -182,7 +182,7 @@ function interactiveMode(team) {
 }
 
 function createDone(team, task) {
-  if (arguments.length !== 3 && (arguments.length !== 2 && !did.interactive)) {
+  if ((!task && !team) || (!task && !did.interactive)) {
     console.log(error('You must provide a team and a task'));
     process.exit(1);
   }
