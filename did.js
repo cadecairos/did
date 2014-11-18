@@ -13,6 +13,7 @@ var API_URL = BASE_URL + 'api/' + API_VERSION + '/';
 var apiToken = process.env.IDONETHIS_API_TOKEN;
 
 var title = clc.red.underline;
+var promptText = clc.red;
 var row = clc.white;
 var success = clc.green;
 var warn = clc.yellow;
@@ -118,8 +119,70 @@ function sendDone(team, task) {
   })
 }
 
+function prompt(msg){
+  return new BPromise(function(resolve) {
+    process.stdout.write(msg);
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', function(val){
+      resolve(val.trim());
+    }).resume();
+  });
+}
+
+function interactiveDone(check, worker) {
+
+  var resolver = BPromise.defer();
+
+  var loop = function() {
+    if ( !check() ) {
+      return resolver.resolve();
+    }
+    return BPromise.cast(worker())
+      .then(loop)
+      .catch(resolver.reject);
+  };
+
+  process.nextTick(loop);
+
+  return resolver.promise;
+}
+
+function interactiveMode(team) {
+
+  var done;
+
+  interactiveDone(function() {
+    return done !== 'done';
+  }, function() {
+    return prompt(promptText('Enter done for ' + team + ' (done to end): '))
+      .then(function(input) {
+        done = input;
+      })
+      .then(function() {
+        if (done !== 'done' && done !== '') {
+          return sendDone(team, done);
+        }
+        if ( done === '' ) {
+          console.log(warn('You didn\'t enter anything!\n'));
+        }
+        return BPromise.resolve;
+      })
+      .then(function(newDone) {
+        if (newDone.owner) {
+          console.log(success.underline('Your done was created!'));
+          console.log(success('created for "' + newDone.owner + '"" in the team "' + team + '"'));
+          console.log(success('Text: ' + newDone.raw_text + '\n'));
+        }
+        return BPromise.resolve;
+      });
+  })
+  .then(function() {
+    process.exit();
+  });
+}
+
 function createDone(team, task) {
-  if ( arguments.length !== 3 ) {
+  if (arguments.length !== 3 && (arguments.length !== 2 && !did.interactive)) {
     console.log(error('You must provide a team and a task'));
     process.exit(1);
   }
@@ -128,16 +191,19 @@ function createDone(team, task) {
     .then(function(teams) {
       for (var i = 0; i < teams.length; i++) {
         if ( teams[i].name === team ) {
-          return sendDone(teams[i].short_name, task);
+          if ( did.interactive ) {
+            return interactiveMode(teams[i].short_name);
+          }
+          return sendDone(teams[i].short_name, task)
+            .then(function(done){
+              console.log(success.underline('Your ' + (did.goal ? 'goal' :  'done') + ' was created!'));
+              console.log(success('created for "' + done.owner + '"" in the team "' + team + '"'));
+              console.log(success('Text: ' + done.raw_text));
+            });
         }
       }
       console.log(error('You are not a part of the team: ' + team));
       process.exit(1);
-    })
-    .then(function(done){
-      console.log(success.underline('Your ' + (did.goal ? 'goal' :  'done') + ' was created!'));
-      console.log(success('created for "' + done.owner + '"" in the team "' + team + '"'));
-      console.log(success('Text: ' + done.raw_text));
     });
 }
 
@@ -163,7 +229,8 @@ function open(team) {
 did
   .version('0.2.0')
   .option('-t, --api-token [token]', 'Specify an API Token')
-  .option('-g, --goal', 'Make this task a goal');
+  .option('-g, --goal', 'Make this task a goal')
+  .option('-i, --interactive', 'interactive done entry mode');
 
 did
   .command('teams')
@@ -172,7 +239,7 @@ did
 
 
 did
-  .command('do <team> <task>')
+  .command('do <team> [task]')
   .description('Create a done for the specified team')
   .action(createDone);
 
@@ -182,7 +249,7 @@ did
   .action(open)
 
 did
-  .command('* <team> <task>')
+  .command('* <team> [task]')
   .description('Shorthand for \'do\'')
   .action(createDone);
 

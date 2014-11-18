@@ -22,6 +22,12 @@ If you're too lazy to add your token to your environment, you can specify it at 
 
 Add a done as a goal by using the `-g` or `--goal` flag. This basically will just append '[] ' to the task you enter.
 
+### Interactive mode
+
+Add dones interactively. You must specify a valid Team. enter 'done' to exit interactive mode.
+
+`did -i Webmaker`
+
 ## Command Reference
 
 ### List your teams
