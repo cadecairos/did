@@ -16,6 +16,10 @@ Run `did --help` or `did COMMAND --help` for help using the tool
 
 If you're too lazy to add your token to your environment, you can specify it at runtime with `-t` or `--api-token`. for example, `did -t top-secret-api-token do MyTeamName "I fixed a thing!"`. Ideally though, you'll want to add the token to your environment once, to make your life easier.
 
+### Goals
+
+Add a done as a goal by using the `-g` or `--goal` flag. This basically will just append '[] ' to the task you enter.
+
 ## Command Reference
 
 ### List your teams
@@ -25,5 +29,9 @@ If you're too lazy to add your token to your environment, you can specify it at 
 ### Create a new done for a Team you're on
 
 `did do [team name] "The done that you did"`
+
+Assuming your team name isn't 'teams', you can omit the `do`
+
+`did [team name] "yay shorthand!"`
 
 If you're not sure what the team name is, run `did teams` to list your teams
