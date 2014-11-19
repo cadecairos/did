@@ -5,6 +5,8 @@ var request = require('request');
 var clc = require('cli-color');
 var BPromise = require('bluebird');
 var openurl = require('openurl');
+var path = require('path-extra');
+var fs = require('fs');
 
 var BASE_URL = 'https://idonethis.com/';
 var API_VERSION = 'v0.1'
@@ -19,17 +21,47 @@ var success = clc.green;
 var warn = clc.yellow;
 var error = clc.red.bold;
 
+// load config file, if exists
+var configFilePath = path.join(path.datadir('did'), 'didconfig.json');
+var config = {};
+
+  try {
+    config = fs.readFileSync(configFilePath, {
+      encoding: 'utf8'
+    });
+    config = JSON.parse(config);
+  } catch (e) {
+    fs.mkdirSync(path.datadir('did'));
+    config = {};
+  }
+
+
+function saveConfig() {
+  try {
+    fs.writeFileSync(configFilePath, JSON.stringify(config), {
+      encoding: 'utf8'
+    });
+    console.log(success('Config saved!'));
+  } catch(e){
+    console.log(error('Error saving your config!'), err);
+    process.exit(1);
+  }
+}
+
 function openURL(url) {
   openurl.open(url);
 }
 
 function setup() {
+
   if ( did.apiToken ) {
     apiToken = did.apiToken;
+  } else if ( config.apiToken ) {
+    apiToken = config.apiToken;
   }
 
   if ( !apiToken ) {
-    console.error('Missing API Token - can be set on your env as "IDONETHIS_API_Token" or passed in with -t or --apiToken');
+    console.error('Missing API Token - can be set on your env as "IDONETHIS_API_TOKEN" or passed in with -t or --apiToken');
     process.exit(1);
   }
 
@@ -170,7 +202,7 @@ function interactiveMode(team) {
       .then(function(newDone) {
         if (newDone.owner) {
           console.log(success.underline('Your done was created!'));
-          console.log(success('created for "' + newDone.owner + '"" in the team "' + team + '"'));
+          console.log(success('created for ' + newDone.owner + ' in the team "' + team + '"'));
           console.log(success('Text: ' + newDone.raw_text + '\n'));
         }
         return BPromise.resolve;
@@ -182,6 +214,14 @@ function interactiveMode(team) {
 }
 
 function createDone(team, task) {
+
+  var hasDefaults = !task && config.defaultTeam;
+
+  if (hasDefaults || (did.interactive && hasDefaults)) {
+    task = team;
+    team = config.defaultTeam;
+  }
+
   if ((!task && !team) || (!task && !did.interactive)) {
     console.log(error('You must provide a team and a task'));
     process.exit(1);
@@ -197,7 +237,7 @@ function createDone(team, task) {
           return sendDone(teams[i].short_name, task)
             .then(function(done){
               console.log(success.underline('Your ' + (did.goal ? 'goal' :  'done') + ' was created!'));
-              console.log(success('created for "' + done.owner + '"" in the team "' + team + '"'));
+              console.log(success('created for ' + done.owner + ' in the team "' + team + '"'));
               console.log(success('Text: ' + done.raw_text));
             });
         }
@@ -226,22 +266,40 @@ function open(team) {
     });
 }
 
+function updateConfig() {
+  if (!did.defaultTeam && !did.apiToken) {
+    console.log( JSON.stringify( config, null, 2 ) );
+    console.log(success('Set new config values with --default-team and --api-token'));
+    process.exit();
+  }
+
+  if ( did.defaultTeam ) {
+    config.defaultTeam = did.defaultTeam;
+  }
+
+  if ( did.apiToken ) {
+    config.apiToken = did.apiToken;
+  }
+
+  saveConfig();
+}
+
 did
-  .version('v0.3.1')
-  .option('-t, --api-token [token]', 'Specify an API Token')
+  .version('v0.4.0')
+  .option('-t, --api-token [token]', 'Specify or save an API Token')
   .option('-g, --goal', 'Make this task a goal')
-  .option('-i, --interactive', 'interactive done entry mode');
+  .option('-i, --interactive', 'interactive done entry mode')
+  .option('--default-team [team]', 'Set a default team in your config');
+
+did
+  .command('do [team] [task]')
+  .description('Create a done for the specified team')
+  .action(createDone);
 
 did
   .command('teams')
   .description('List your teams')
   .action(teams);
-
-
-did
-  .command('do <team> [task]')
-  .description('Create a done for the specified team')
-  .action(createDone);
 
 did
   .command('open [team]')
@@ -249,8 +307,13 @@ did
   .action(open)
 
 did
-  .command('* <team> [task]')
-  .description('Shorthand for \'do\'')
+  .command('config')
+  .description('Configure did using the --default-team and --api-token options')
+  .action(updateConfig);
+
+did
+  .command('* [team] [task]')
+  .description('Shorthand for \'do\'. If you set a default team, you can just type in your done (quoted)')
   .action(createDone);
 
 did.parse(process.argv);

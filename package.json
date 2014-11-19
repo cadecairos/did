@@ -22,7 +22,8 @@
     "request": "^2.48.0",
     "cli-color": "^0.3.2",
     "bluebird": "^2.3.11",
-    "openurl": "^1.1.0"
+    "openurl": "^1.1.0",
+    "path-extra": "^0.3.0"
   },
   "keywords": [
     "idonethis",
