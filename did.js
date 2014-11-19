@@ -31,7 +31,9 @@ var config = {};
     });
     config = JSON.parse(config);
   } catch (e) {
-    fs.mkdirSync(path.datadir('did'));
+    if ( !fs.existsSync(path.datadir('did')) ) {
+      fs.mkdirSync(path.datadir('did'));
+    }
     config = {};
   }
 
