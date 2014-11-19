@@ -17,10 +17,15 @@ Run `did --help` or `did COMMAND --help` for help using the tool
 ### API Tokens
 
 Did will first look on process.env for the `IDONETHIS_API_TOKEN` variable. It will then attempt to load a "didconfig.json" file in your Operating Systems data directory.
-A token loaded from this file will take precedence over one on process.env. If you're too lazy to add your token to your environment, you can specify it at runtime with `-t` or `--api-token`.
-For example, `did -t top-secret-api-token do MyTeamName "I fixed a thing!"`. This method has the higest precedence when determining what token to use.
+A token loaded from this file will take precedence over one on process.env. If you're too lazy to add your token to your environment, you can specify it at runtime with `-t` or `--api-token`. This method has the higest precedence when determining which token to use.
 
-Set or change your token by running `did config --api-token <token>`. This saves it to a didconfig file in your Operating Systems data directory.
+`did -t top-secret-api-token do MyTeamName "I fixed a thing!"`
+
+Set or change your token by running:
+
+`did config --api-token <token>`
+
+This saves it to a didconfig file in your Operating System's data directory.
 
 ### Goals
 
@@ -52,6 +57,7 @@ Set your default team by passing the --default-team option to the `config` comma
 `did do [team name] "The done that you did"`
 
 With default team set:
+
 `did do "The done that you did"`
 
 Assuming your team name isn't 'teams', you can omit the `do`
@@ -59,9 +65,11 @@ Assuming your team name isn't 'teams', you can omit the `do`
 `did [team name] "yay shorthand!"`
 
 With default team set:
+
 `did "such ease, wow"`
 
 Add a goal!
+
 `did -g "fixed this thing and that!"`
 
 If you're not sure what the team name is, run `did teams` to list your teams
