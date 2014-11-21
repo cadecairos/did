@@ -430,7 +430,7 @@ function listDones() {
 }
 
 did
-  .version('v0.4.0')
+  .version('v0.5.0')
   .option('-t, --api-token <token>', 'Specify or save an API Token')
   .option('-g, --goal', 'Make this task a goal')
   .option('-i, --interactive', 'interactive done entry mode')
