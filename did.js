@@ -15,7 +15,7 @@ var API_URL = BASE_URL + 'api/' + API_VERSION + '/';
 var apiToken = process.env.IDONETHIS_API_TOKEN;
 
 var title = clc.red.underline;
-var promptText = clc.red;
+var promptText = highlight = clc.red;
 var row = clc.white;
 var success = clc.green;
 var warn = clc.yellow;
@@ -25,18 +25,26 @@ var error = clc.red.bold;
 var configFilePath = path.join(path.datadir('did'), 'didconfig.json');
 var config = {};
 
-  try {
-    config = fs.readFileSync(configFilePath, {
-      encoding: 'utf8'
-    });
-    config = JSON.parse(config);
-  } catch (e) {
-    if ( !fs.existsSync(path.datadir('did')) ) {
-      fs.mkdirSync(path.datadir('did'));
-    }
-    config = {};
+try {
+  config = fs.readFileSync(configFilePath, {
+    encoding: 'utf8'
+  });
+  config = JSON.parse(config);
+} catch (e) {
+  if ( !fs.existsSync(path.datadir('did')) ) {
+    fs.mkdirSync(path.datadir('did'));
+  }
+  config = {};
+}
+
+function limitCheck(val) {
+  val = parseInt(val);
+  if ( !isFinite(val) ) {
+    return 10;
   }
 
+  return Math.floor(val);
+}
 
 function saveConfig() {
   try {
@@ -94,7 +102,7 @@ function getTeams() {
 
       if ( !body.ok ) {
         console.error('Something went wrong!');
-        console.log(cliff.inspect(body));
+        console.log(body);
         process.exit(1);
       }
 
@@ -144,7 +152,7 @@ function sendDone(team, task) {
 
       if ( !body.ok ) {
         console.error('Something went wrong!');
-        console.log(cliff.inspect(body));
+        console.log(body);
         process.exit(1);
       }
 
@@ -286,12 +294,156 @@ function updateConfig() {
   saveConfig();
 }
 
+function collectTags(val, tags) {
+  if (val.indexOf(',') >= 0) {
+    val.split(',').forEach(function(tag) {
+      tags.push(val);
+    });
+  } else {
+    tags.push(val);
+  }
+  return tags;
+}
+
+function buildFilter(key, value) {
+  return key + '=' + value + '&';
+}
+
+function buildFilterString() {
+  return new BPromise(function(resolve) {
+    var requestFilters = '?';
+
+    if (did.team) {
+      requestFilters += buildFilter('team', did.team);
+    }
+
+    if (did.owner) {
+      requestFilters += buildFilter('owner', did.owner);
+    }
+
+    if (did.doneDate) {
+      requestFilters += buildFilter('done_date', did.doneDate);
+    }
+
+    if (did.doneAfter) {
+      requestFilters += buildFilter('done_date_after', did.doneAfter);
+    }
+
+    if (did.doneBefore) {
+      requestFilters += buildFilter('done_date_before', did.doneBefore);
+    }
+
+    if (did.tag && did.tag.length) {
+      requestFilters +=  buildFilter('tags', did.tag.join(','));
+    }
+
+    if (did.sortBy) {
+      requestFilters += buildFilter('order_by', did.sortBy);
+    }
+
+    if (did.limit) {
+      requestFilters += buildFilter('page_size', did.limit);
+    }
+
+    if (did.page) {
+      requestFilters += buildFilter('page', did.page);
+    }
+
+    resolve(requestFilters.slice(0, requestFilters.length - 1));
+
+  });
+}
+
+function fetchDones(filterString) {
+  return new BPromise(function(resolve) {
+    var req = setup();
+    req({
+      method: 'GET',
+      url: API_URL + 'dones/' + filterString
+    }, function(err, resp, body) {
+      if (err) {
+        console.log(error('ERR: ' + err.code));
+        process.exit(1);
+      }
+
+      if (resp.statusCode !== 200) {
+        if (resp.statusCode === 400) {
+          console.log(error('Invalid request data!'));
+          console.log(body.errors);
+        } else if (resp.statusCode === 404) {
+          console.log(warn('Page not found'));
+        } else {
+          console.log(error('Request failed! check your token!'));
+        }
+        process.exit(1);
+      }
+
+      if ( !body.ok ) {
+        console.log(error('Something went wrong!'));
+        console.log(body);
+        process.exit(1);
+      }
+
+      resolve(body);
+    });
+  });
+}
+
+function outputDones(body) {
+  if ( !body.results || !body.results.length ) {
+    console.log(warn('No dones found!'));
+    return;
+  }
+
+  var page = did.page || 1;
+  var limit = did.limit || 10;
+
+  console.log(success('Found ' + body.count + ' dones'));
+  console.log(success('Showing page ' + page + ' of ' + Math.ceil(body.count / limit) + '\n'));
+
+  body.results.forEach(function(done) {
+    console.log('On ' + done.done_date + ', ' + highlight(done.owner) + ' did:');
+    console.log(unescape(done.raw_text) + '\n');
+  });
+}
+
+function listDones() {
+  if ( did.team ) {
+    getTeams()
+      .then(function(teams) {
+        for (var i = 0; i < teams.length; i++) {
+          if ( teams[i].name === did.team ) {
+            did.team = teams[i].short_name;
+            return buildFilterString();
+          }
+        }
+        console.log(error('You are not a part of the team: ' + team));
+        process.exit(1);
+      })
+      .then(fetchDones)
+      .then(outputDones);
+  } else {
+    buildFilterString()
+      .then(fetchDones)
+      .then(outputDones);
+  }
+}
+
 did
   .version('v0.4.0')
-  .option('-t, --api-token [token]', 'Specify or save an API Token')
+  .option('-t, --api-token <token>', 'Specify or save an API Token')
   .option('-g, --goal', 'Make this task a goal')
   .option('-i, --interactive', 'interactive done entry mode')
-  .option('--default-team [team]', 'Set a default team in your config');
+  .option('-m, --team <team>', 'Specify a team')
+  .option('-o, --owner <owner>', 'Specify an owner')
+  .option('-d, --done-date <date>', 'Specify a date that a done must be equal to. Format is \'YYYY-MM-DD\'. The special values \'today\' and \'yesterday\' are also valid.')
+  .option('-a, --done-after <date>', 'Specify a date that dones must have been created on or after. Format is \'YYYY-MM-DD\'.')
+  .option('-b, --done-before <date>', 'Specify a date that dones must have been created on or before. Format is \'YYYY-MM-DD\'.')
+  .option('-s, --sort-by <sortby>', 'Specify the order dones are returned in. can be: \'created\', \'done_date\', \'-created\', or \'-done_date\'. The negative sign indicates a decreasing order. default is done_date')
+  .option('-l, --limit <limit>', 'Specify a number of dones to fetch. default is 10, max is 100.', limitCheck)
+  .option('-p, --page <page>', 'Specify a page number to fetch if there are more dones than could be fetched.')
+  .option('--tag <tag>', 'Specify a tag. can be repeated to add multiple tags.', collectTags, [])
+  .option('--default-team <team>', 'Set a default team in your config');
 
 did
   .command('do [team] [task]')
@@ -312,6 +464,11 @@ did
   .command('config')
   .description('Configure did using the --default-team and --api-token options')
   .action(updateConfig);
+
+did
+  .command('dones')
+  .description('show dones, which can be filtered using options')
+  .action(listDones);
 
 did
   .command('* [team] [task]')
